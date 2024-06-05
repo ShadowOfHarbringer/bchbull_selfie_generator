@@ -1,0 +1,133 @@
+#!/bin/bash
+    
+function print_syntax() {
+
+    echo ""
+    echo "Usage: create_bchbull_selfie [contract-bitcoincash_filename]"
+    echo "   or  create_bchbull_selfie [contract-bitcoincash_filename] [bull image filename, default:random]"
+    echo "   or  create_bchbull_selfie [contract-bitcoincash_filename] [bull image filename] [hide_financial_details=y/hide/n/show, default:show]"
+    
+    echo ""
+    
+    echo "Examples:"
+    echo "   create_bchbull_selfie my_contract_image.png"
+    echo "   or  create_bchbull_selfie my_contract_image.png my_ai_generated_bull.jpg"
+    echo "   or  create_bchbull_selfie my_contract_image.png my_ai_generated_bull.jpg hide"
+    echo "   or  create_bchbull_selfie random hide"
+
+}
+
+function unmet_dependencies() {
+    echo "Critical: Dependencies are not installed!"
+    echo ""
+    echo "Required dependencies: imagemagick(imagick), GNU utils (sed, shuf, head)"
+}
+
+USERDIR=`pwd`
+
+cd "$(dirname "$0")"
+
+EPOCHTIME=`date +%s`
+CONTRACT_IMAGE_FILE_UNCLEAN="$1"
+CONTRACT_IMAGE_FILE="${CONTRACT_IMAGE_FILE_UNCLEAN//\\/_}"
+CONTRACT_IMAGE_FILE="${CONTRACT_IMAGE_FILE// /_}"
+BULL_IMAGE_FILE="$2"
+HIDE_FINANCIAL_DETAILS="$3"
+CHECK_DEPENDENCIES=`whereis magick`
+
+if [ -z "$CONTRACT_IMAGE_FILE_UNCLEAN" ]; then
+    echo "Critical: Contract image file not given!"
+    print_syntax
+    exit 1
+fi
+
+CHECK_FILENAME="$USERDIR/$CONTRACT_IMAGE_FILE_UNCLEAN"
+
+if [ -f "$CHECK_FILENAME" ] 
+then
+    echo -n ""
+else
+    echo "Critical: Contract image file \"${USERDIR}/${CONTRACT_IMAGE_FILE_UNCLEAN}\" does not exist!"
+    print_syntax
+    exit 1
+fi
+
+if [ ! "$CONTRACT_IMAGE_FILE" = "$CONTRACT_IMAGE_FILE_UNCLEAN" ]; then
+    echo ""
+    echo "Warning: Contract image filename contains spaces, made a copy without spaces for imagemagick to handle."
+    echo ""
+    cp "$USERDIR/$CONTRACT_IMAGE_FILE_UNCLEAN" "$USERDIR/$CONTRACT_IMAGE_FILE"
+fi
+
+CONTRACT_IMAGE_FILE="$USERDIR/$CONTRACT_IMAGE_FILE"
+
+
+if ! echo "$CHECK_DEPENDENCIES" | grep -q "/magick"; then
+    unmet_dependencies
+    exit 2
+fi
+
+
+
+
+if [ -z "$BULL_IMAGE_FILE" ] || [ "$BULL_IMAGE_FILE" = "random" ]; then
+    
+    RAW_BULL_DIR_LIST=`find bull_selfies_raw/ -type d | sed 1d`
+
+    for i in $RAW_BULL_DIR_LIST 
+    do
+        CURDIR_LIST=`ls $i`
+        for j in $CURDIR_LIST
+        do
+            RAW_BULL_FILE_LIST="$RAW_BULL_FILE_LIST$i/$j"$'\n'
+        done
+    done
+
+    RANDOM_RAW_BULL=`echo "$RAW_BULL_FILE_LIST" | shuf -n 1`
+    SELECTED_RAW_BULL="$RANDOM_RAW_BULL"
+    #RANDOM_RAW_BULL=`echo "$RAW_BULL_FILE_LIST" | head -n 1`
+    #echo "$RANDOM_RAW_BULL"
+    
+else
+
+    if [ ! -f "$BULL_IMAGE_FILE" ]; then
+        echo "Critical: bull image filename not found!"
+        print_syntax
+        exit 1
+    else
+        SELECTED_RAW_BULL="$BULL_IMAGE_FILE"
+    fi
+    
+fi
+
+
+POSX1="1227"
+POSY1="2024"
+
+POSX2=$((POSX1 + 20))
+POSY2=$((POSY1 + 20))
+
+
+
+if [ "$HIDE_FINANCIAL_DETAILS" = "hide" ] || [ "$HIDE_FINANCIAL_DETAILS" = "y" ]; then
+    OUTPUT_FILENAME="$USERDIR/$EPOCHTIME-bchbull-selfie-private.png"
+    magick -size 2560x2816 composite_images/background-finished-image-frame.png \
+        \( $SELECTED_RAW_BULL -resize 2048x2048 \) -geometry  +256+256  -composite \
+        \( composite_images/background-contract-image-frame.png -background 'rgba(0,0,0,0)' -rotate -8 \)   -geometry  +$POSX1+$POSY1  -composite \
+        \( "$CONTRACT_IMAGE_FILE" -background 'rgba(0,0,0,0)' -rotate -8 \)   -geometry  +$POSX2+$POSY2  -composite \
+        \( composite_images/contract-privacy-cover.png -rotate -8 \)   -geometry  +$POSX1+$POSY1  -composite \
+        "$OUTPUT_FILENAME"
+else
+    OUTPUT_FILENAME="$USERDIR/$EPOCHTIME-bchbull-selfie.png"
+    magick -size 2560x2816 composite_images/background-finished-image-frame.png \
+        \( $SELECTED_RAW_BULL -resize 2048x2048 \) -geometry  +256+256  -composite \
+        \( composite_images/background-contract-image-frame.png -background 'rgba(0,0,0,0)' -rotate -8 \)   -geometry  +$POSX1+$POSY1  -composite \
+        \( "$CONTRACT_IMAGE_FILE" -background 'rgba(0,0,0,0)' -rotate -8 \)   -geometry  +$POSX2+$POSY2  -composite \
+        "$OUTPUT_FILENAME"
+fi
+
+echo "Made $OUTPUT_FILENAME"
+echo "Congratulations on your concract!"
+
+
+
