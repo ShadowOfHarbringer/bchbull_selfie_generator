@@ -34,6 +34,8 @@ CONTRACT_IMAGE_FILE="${CONTRACT_IMAGE_FILE// /_}"
 BULL_IMAGE_FILE="$2"
 HIDE_FINANCIAL_DETAILS="$3"
 CHECK_DEPENDENCIES=`whereis magick`
+CHECK_DEPENDENCIES2=`whereis convert`
+
 
 if [ -z "$CONTRACT_IMAGE_FILE_UNCLEAN" ]; then
     echo "Critical: Contract image file not given!"
@@ -63,8 +65,18 @@ CONTRACT_IMAGE_FILE="$USERDIR/$CONTRACT_IMAGE_FILE"
 
 
 if ! echo "$CHECK_DEPENDENCIES" | grep -q "/magick"; then
-    unmet_dependencies
-    exit 2
+   
+    if ! echo "$CHECK_DEPENDENCIES2" | grep -q "/convert"; then
+        unmet_dependencies
+        exit 2
+    else
+        MAGICK_BINARY="convert"
+    fi
+    
+else
+
+    MAGICK_BINARY="magick"
+    
 fi
 
 
@@ -111,7 +123,7 @@ POSY2=$((POSY1 + 20))
 
 if [ "$HIDE_FINANCIAL_DETAILS" = "hide" ] || [ "$HIDE_FINANCIAL_DETAILS" = "y" ]; then
     OUTPUT_FILENAME="$USERDIR/$EPOCHTIME-bchbull-selfie-private.png"
-    magick -size 2560x2816 composite_images/background-finished-image-frame.png \
+    $MAGICK_BINARY -size 2560x2816 composite_images/background-finished-image-frame.png \
         \( $SELECTED_RAW_BULL -resize 2048x2048 \) -geometry  +256+256  -composite \
         \( composite_images/background-contract-image-frame.png -background 'rgba(0,0,0,0)' -rotate -8 \)   -geometry  +$POSX1+$POSY1  -composite \
         \( "$CONTRACT_IMAGE_FILE" -background 'rgba(0,0,0,0)' -rotate -8 \)   -geometry  +$POSX2+$POSY2  -composite \
@@ -119,7 +131,7 @@ if [ "$HIDE_FINANCIAL_DETAILS" = "hide" ] || [ "$HIDE_FINANCIAL_DETAILS" = "y" ]
         "$OUTPUT_FILENAME"
 else
     OUTPUT_FILENAME="$USERDIR/$EPOCHTIME-bchbull-selfie.png"
-    magick -size 2560x2816 composite_images/background-finished-image-frame.png \
+    $MAGICK_BINARY -size 2560x2816 composite_images/background-finished-image-frame.png \
         \( $SELECTED_RAW_BULL -resize 2048x2048 \) -geometry  +256+256  -composite \
         \( composite_images/background-contract-image-frame.png -background 'rgba(0,0,0,0)' -rotate -8 \)   -geometry  +$POSX1+$POSY1  -composite \
         \( "$CONTRACT_IMAGE_FILE" -background 'rgba(0,0,0,0)' -rotate -8 \)   -geometry  +$POSX2+$POSY2  -composite \
