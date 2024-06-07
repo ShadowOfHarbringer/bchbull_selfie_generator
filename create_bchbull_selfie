@@ -146,7 +146,7 @@ fi
 $MAGICK_BINARY -size 2560x2816 composite_images/background-finished-image-frame.png \
     \( "$SELECTED_RAW_BULL" -resize 2048x2048 \) -geometry  +256+256  -composite \
     \( $TMP_FILENAME -background 'rgba(0,0,0,0)' -rotate -8 \)   -geometry  +$POSX1+$POSY1  -composite \
-    -quality 94 -sampling-factor 4:4:4 \
+    -quality 94 -sampling-factor 4:4:4 -interlace JPEG \
     "$OUTPUT_FILENAME"
     
 rm $TMP_FILENAME > /dev/null 2>&1
