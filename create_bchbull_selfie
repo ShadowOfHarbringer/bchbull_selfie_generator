@@ -18,16 +18,19 @@ function print_syntax() {
 }
 
 function unmet_dependencies() {
+
     echo "Critical: Dependencies are not installed!"
     echo ""
     echo "Required dependencies: imagemagick(imagick), GNU utils (sed, shuf, head)"
+    
 }
 
 USERDIR=`pwd`
 
 cd "$(dirname "$0")"
 
-EPOCHTIME=`date +%s`
+TMPDIR="./tmp/"
+EPOCHTIME=`date +%s%N | cut -b1-13`
 CONTRACT_IMAGE_FILE_UNCLEAN="$1"
 CONTRACT_IMAGE_FILE="${CONTRACT_IMAGE_FILE_UNCLEAN//\\/_}"
 CONTRACT_IMAGE_FILE="${CONTRACT_IMAGE_FILE// /_}"
@@ -36,29 +39,37 @@ HIDE_FINANCIAL_DETAILS="$3"
 CHECK_DEPENDENCIES=`whereis magick`
 CHECK_DEPENDENCIES2=`whereis convert`
 
+mkdir -p $TMPDIR > /dev/null 2>&1
 
 if [ -z "$CONTRACT_IMAGE_FILE_UNCLEAN" ]; then
+
     echo "Critical: Contract image file not given!"
     print_syntax
     exit 1
+    
 fi
 
 CHECK_FILENAME="$USERDIR/$CONTRACT_IMAGE_FILE_UNCLEAN"
 
-if [ -f "$CHECK_FILENAME" ] 
-then
+if [ -f "$CHECK_FILENAME" ]; then
+
     echo -n ""
+    
 else
+
     echo "Critical: Contract image file \"${USERDIR}/${CONTRACT_IMAGE_FILE_UNCLEAN}\" does not exist!"
     print_syntax
     exit 1
+    
 fi
 
 if [ ! "$CONTRACT_IMAGE_FILE" = "$CONTRACT_IMAGE_FILE_UNCLEAN" ]; then
+
     echo ""
     echo "Warning: Contract image filename contains spaces, made a copy without spaces for imagemagick to handle."
     echo ""
     cp "$USERDIR/$CONTRACT_IMAGE_FILE_UNCLEAN" "$USERDIR/$CONTRACT_IMAGE_FILE"
+    
 fi
 
 CONTRACT_IMAGE_FILE="$USERDIR/$CONTRACT_IMAGE_FILE"
@@ -80,8 +91,6 @@ else
 fi
 
 
-
-
 if [ -z "$BULL_IMAGE_FILE" ] || [ "$BULL_IMAGE_FILE" = "random" ]; then
     
     RAW_BULL_DIR_LIST=`find bull_selfies_raw/ -type d | sed 1d`
@@ -97,8 +106,6 @@ if [ -z "$BULL_IMAGE_FILE" ] || [ "$BULL_IMAGE_FILE" = "random" ]; then
 
     RANDOM_RAW_BULL=`echo "$RAW_BULL_FILE_LIST" | shuf -n 1`
     SELECTED_RAW_BULL="$RANDOM_RAW_BULL"
-    #RANDOM_RAW_BULL=`echo "$RAW_BULL_FILE_LIST" | head -n 1`
-    #echo "$RANDOM_RAW_BULL"
     
 else
 
@@ -112,31 +119,37 @@ else
     
 fi
 
-
 POSX1="1227"
-POSY1="2024"
+POSY1="2014"
 
-POSX2=$((POSX1 + 20))
-POSY2=$((POSY1 + 20))
+CONTRACT_INSIDE_IMFRAME_X=20
+CONTRACT_INSIDE_IMFRAME_Y=20
 
+POSX2=$((POSX1 + CONTRACT_INSIDE_IMFRAME_X))
+POSY2=$((POSY1 + CONTRACT_INSIDE_IMFRAME_Y))
 
+TMP_FILENAME="$TMPDIR/$EPOCHTIME-contract-work.png"
 
 if [ "$HIDE_FINANCIAL_DETAILS" = "hide" ] || [ "$HIDE_FINANCIAL_DETAILS" = "y" ]; then
-    OUTPUT_FILENAME="$USERDIR/$EPOCHTIME-bchbull-selfie-private.png"
-    $MAGICK_BINARY -size 2560x2816 composite_images/background-finished-image-frame.png \
-        \( $SELECTED_RAW_BULL -resize 2048x2048 \) -geometry  +256+256  -composite \
-        \( composite_images/background-contract-image-frame.png -background 'rgba(0,0,0,0)' -rotate -8 \)   -geometry  +$POSX1+$POSY1  -composite \
-        \( "$CONTRACT_IMAGE_FILE" -background 'rgba(0,0,0,0)' -rotate -8 \)   -geometry  +$POSX2+$POSY2  -composite \
-        \( composite_images/contract-privacy-cover.png -rotate -8 \)   -geometry  +$POSX1+$POSY1  -composite \
-        "$OUTPUT_FILENAME"
+    OUTPUT_FILENAME="$USERDIR/$EPOCHTIME-bchbull-selfie-private.jpg"
+    $MAGICK_BINARY -size 1000x580 composite_images/background-contract-image-frame.png \
+        "$CONTRACT_IMAGE_FILE"    -geometry  +$CONTRACT_INSIDE_IMFRAME_X+$CONTRACT_INSIDE_IMFRAME_Y  -composite \
+         composite_images/contract-privacy-cover.png    -geometry  +0+0  -composite \
+        "$TMP_FILENAME"
 else
-    OUTPUT_FILENAME="$USERDIR/$EPOCHTIME-bchbull-selfie.png"
-    $MAGICK_BINARY -size 2560x2816 composite_images/background-finished-image-frame.png \
-        \( $SELECTED_RAW_BULL -resize 2048x2048 \) -geometry  +256+256  -composite \
-        \( composite_images/background-contract-image-frame.png -background 'rgba(0,0,0,0)' -rotate -8 \)   -geometry  +$POSX1+$POSY1  -composite \
-        \( "$CONTRACT_IMAGE_FILE" -background 'rgba(0,0,0,0)' -rotate -8 \)   -geometry  +$POSX2+$POSY2  -composite \
-        "$OUTPUT_FILENAME"
+    OUTPUT_FILENAME="$USERDIR/$EPOCHTIME-bchbull-selfie.jpg"
+    $MAGICK_BINARY -size 1000x580 composite_images/background-contract-image-frame.png \
+        "$CONTRACT_IMAGE_FILE"    -geometry  +$CONTRACT_INSIDE_IMFRAME_X+$CONTRACT_INSIDE_IMFRAME_Y  -composite \
+        "$TMP_FILENAME"
 fi
+
+$MAGICK_BINARY -size 2560x2816 composite_images/background-finished-image-frame.png \
+    \( "$SELECTED_RAW_BULL" -resize 2048x2048 \) -geometry  +256+256  -composite \
+    \( $TMP_FILENAME -background 'rgba(0,0,0,0)' -rotate -8 \)   -geometry  +$POSX1+$POSY1  -composite \
+    -quality 94 -sampling-factor 4:4:4 \
+    "$OUTPUT_FILENAME"
+    
+rm $TMP_FILENAME > /dev/null 2>&1
 
 echo "Made $OUTPUT_FILENAME"
 echo "Congratulations on your concract!"
